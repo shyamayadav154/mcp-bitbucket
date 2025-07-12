@@ -1,7 +1,9 @@
 {
   "name": "mcp-bitbucket",
   "version": "0.0.1",
+  "description": "Model Context Protocol server for Bitbucket integration - manage pull requests, comments, and diffs",
   "type": "module",
+  "main": "./build/index.js",
   "bin": {
     "mcp-bitbucket": "./build/index.js"
   },
@@ -9,11 +11,31 @@
     "build": "tsc && chmod 755 build/index.js",
     "dev": "tsc --watch"
   },
-  "files": [ "build" ],
-  "keywords": ["modelcontextprotocol", "bitbucket", "sdk" ],
-  "author": "",
+  "files": [ 
+    "build",
+    "README.md"
+  ],
+  "keywords": [
+    "modelcontextprotocol", 
+    "bitbucket", 
+    "mcp", 
+    "claude", 
+    "ai", 
+    "integration", 
+    "api", 
+    "pullrequest", 
+    "git"
+  ],
+  "author": "Shyamanad Yadav",
   "license": "ISC",
-  "description": "",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/shyamayadav154/mcp-bitbucket.git"
+  },
+  "homepage": "https://github.com/shyamayadav154/mcp-bitbucket",
+  "engines": {
+    "node": ">=18.0.0"
+  },
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.15.1",
     "zod": "^3.25.76"

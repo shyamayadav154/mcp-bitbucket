@@ -27,7 +27,7 @@
     "git"
   ],
   "author": "Shyamanad Yadav",
-  "license": "ISC",
+  "license": "MIT",
   "repository": {
     "type": "git",
     "url": "https://github.com/shyamayadav154/mcp-bitbucket.git"

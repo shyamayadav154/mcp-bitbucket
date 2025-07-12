@@ -80,4 +80,4 @@ This server uses Bitbucket App Passwords for authentication. Create an App Passw
 
 ## License
 
-ISC
+MIT

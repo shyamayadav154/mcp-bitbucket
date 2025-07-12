@@ -8,30 +8,30 @@ A Model Context Protocol (MCP) server that provides access to Bitbucket pull req
 - **Comment System**: Get and add comments to pull requests
 - **Diff Inspection**: Retrieve pull request diffs for code review
 - **Branch/PR_ID based Search**: Find pull requests by source branch name or PR ID
-- **Flexible Repository Support**: Works with any Bitbucket repository
+- **Environment-based Configuration**: Configure repository via environment variables
 
 ## API
 
 ### Tools
 
 - **list_pull_requests**
-  - List pull requests from a Bitbucket repository
-  - Input: `repository` (optional), `state` (OPEN/MERGED/DECLINED), `limit` (1-50) default 50
+  - List pull requests from the configured Bitbucket repository
+  - Input: `state` (OPEN/MERGED/DECLINED), `limit` (1-50) default 50
   - Returns: Formatted list of pull requests with metadata
 
 - **get_pr_comments**
   - Get comments from a specific pull request
-  - Input: `repository` (optional), `pr_id`, `limit` (1-100) default 50
+  - Input: `pr_id`, `limit` (1-100) default 50
   - Returns: All comments including inline code comments
 
 - **get_pr_with_diff**
   - Get pull request details with diff content
-  - Input: `repository` (optional), `source_branch` OR `pr_id`, `include_diff` (boolean)
+  - Input: `source_branch` OR `pr_id`, `include_diff` (boolean)
   - Returns: Complete pull request information with diff
 
 - **add_pr_comment**
   - Add a general comment to a pull request
-  - Input: `repository` (optional), `pr_id`, `content`
+  - Input: `pr_id`, `content`
   - Returns: Created comment details
 
 ## Prerequisites
@@ -63,7 +63,7 @@ Generate one from [Bitbucket App Passwords](https://bitbucket.org/account/settin
       "env": {
         "BITBUCKET_USERNAME": "<your_username>",
         "BITBUCKET_PASSWORD": "<your_app_password>",
-        "BITBUCKET_URL": "https://bitbucket.org/<workspce>/<repo_name>"
+        "BITBUCKET_URL": "https://bitbucket.org/<workspace>/<repo_name>"
       }
     }
   }

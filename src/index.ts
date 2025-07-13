@@ -142,7 +142,7 @@ server.tool(
 // Register PR with diff tool (by source branch or PR ID)
 server.tool(
   "get_pr_details",
-  "Get pull request details with individual commit messages and their diffs by source branch name or PR ID",
+  "Get pull request details with commit messages and consolidated PR diff by source branch name or PR ID",
   {
     source_branch: z
       .string()
@@ -152,7 +152,7 @@ server.tool(
     include_diff: z
       .boolean()
       .optional()
-      .describe("Whether to include commit diffs in the response (defaults to false)"),
+      .describe("Whether to include consolidated PR diff in the response (defaults to false)"),
   },
   async ({ source_branch, pr_id, include_diff }) => {
     // Validate that either source_branch or pr_id is provided
@@ -238,46 +238,39 @@ server.tool(
       });
 
       let commits: any[] = [];
+      let prDiff = null;
+
       if (commitsResponse.ok) {
         const commitsData = await commitsResponse.json();
 
-        // Get diff for each commit if requested
-        for (const commit of commitsData.values) {
-          let diff = null;
-          
-          if (shouldIncludeDiff) {
-            const commitDiffUrl = `https://api.bitbucket.org/2.0/repositories/${WORKSPACE_AND_REPO_PATH}/diff/${commit.hash}`;
+        // Get commits without individual diffs
+        commits = commitsData.values.map((commit: any) => ({
+          hash: commit.hash,
+          message: commit.message,
+          author: commit.author.user?.display_name || commit.author.raw,
+          date: commit.date,
+        }));
 
-            try {
-              const commitDiffResponse = await fetch(commitDiffUrl, {
-                headers: {
-                  Authorization: `Basic ${auth}`,
-                  Accept: "text/plain",
-                },
-              });
+        // Get consolidated diff for the entire PR if requested
+        if (shouldIncludeDiff) {
+          const prDiffUrl = `https://api.bitbucket.org/2.0/repositories/${WORKSPACE_AND_REPO_PATH}/pullrequests/${pr.id}/diff`;
 
-              if (commitDiffResponse.ok) {
-                diff = await commitDiffResponse.text();
-              } else {
-                diff = `Error fetching diff: ${commitDiffResponse.status} ${commitDiffResponse.statusText}`;
-              }
-            } catch (error) {
-              diff = `Error fetching diff: ${error instanceof Error ? error.message : String(error)}`;
+          try {
+            const prDiffResponse = await fetch(prDiffUrl, {
+              headers: {
+                Authorization: `Basic ${auth}`,
+                Accept: "text/plain",
+              },
+            });
+
+            if (prDiffResponse.ok) {
+              prDiff = await prDiffResponse.text();
+            } else {
+              prDiff = `Error fetching PR diff: ${prDiffResponse.status} ${prDiffResponse.statusText}`;
             }
+          } catch (error) {
+            prDiff = `Error fetching PR diff: ${error instanceof Error ? error.message : String(error)}`;
           }
-
-          const commitData: any = {
-            hash: commit.hash,
-            message: commit.message,
-            author: commit.author.user?.display_name || commit.author.raw,
-            date: commit.date,
-          };
-
-          if (shouldIncludeDiff) {
-            commitData.diff = diff;
-          }
-
-          commits.push(commitData);
         }
       } else {
         commits = [
@@ -285,7 +278,7 @@ server.tool(
         ];
       }
 
-      const prDetails = {
+      const prDetails: any = {
         id: pr.id,
         title: pr.title,
         // description: pr.description,
@@ -305,6 +298,11 @@ server.tool(
           })) || [],
         commits: commits,
       };
+
+      // Add the consolidated diff if requested and available
+      if (shouldIncludeDiff && prDiff !== null) {
+        prDetails.diff = prDiff;
+      }
 
       return {
         content: [

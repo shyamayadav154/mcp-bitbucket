@@ -9,6 +9,8 @@ A Model Context Protocol (MCP) server that provides access to Bitbucket pull req
 - **Diff Inspection**: Retrieve individual commit diffs for comprehensive code review
 - **Branch/PR_ID based Search**: Find pull requests by source branch name or PR ID
 - **Target Branch Filtering**: Filter pull requests by destination/target branch
+- **Pipeline Management**: List and filter CI/CD pipelines by state and target branch with automatic PR ID extraction from commit messages
+- **Commit Message Fetching**: Automatically retrieves commit message details when not available in pipeline response
 - **Environment-based Configuration**: Configure repository via environment variables
 
 ## API
@@ -29,6 +31,11 @@ A Model Context Protocol (MCP) server that provides access to Bitbucket pull req
   - Add a general comment to a pull request
   - Input: `pr_id`, `content`
   - Returns: Created comment details
+
+- **list_pipelines**
+  - List pipelines from the configured Bitbucket repository with commit message details
+  - Input: `state` (IN_PROGRESS/SUCCESSFUL/FAILED/STOPPED/SKIPPED/PENDING/ERROR), `limit` (1-100) default 10, `page` (pagination), `target_branch` (filter by target branch)
+  - Returns: Formatted list of pipelines with metadata, PR ID extracted from commit messages, commit details, and pagination info
 
 ## Prerequisites
 

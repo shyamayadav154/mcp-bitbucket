@@ -280,7 +280,7 @@ server.tool(
       const prDetails = {
         id: pr.id,
         title: pr.title,
-        description: pr.description,
+        // description: pr.description,
         state: pr.state,
         author: pr.author.display_name,
         created_on: pr.created_on,
@@ -402,6 +402,153 @@ server.tool(
           {
             type: "text",
             text: `Error adding PR comment: ${error instanceof Error ? error.message : String(error)}`,
+          },
+        ],
+        isError: true,
+      };
+    }
+  },
+);
+
+// Register list pipelines tool
+server.tool(
+  "list_pipelines",
+  "List pipelines from a Bitbucket repository with filtering and pagination support",
+  {
+    state: z
+      .enum([
+        "IN_PROGRESS",
+        "SUCCESSFUL",
+        "FAILED",
+        "STOPPED",
+        "SKIPPED",
+        "PENDING",
+        "ERROR",
+      ])
+      .optional()
+      .describe("Filter pipelines by state"),
+    limit: z
+      .number()
+      .min(1)
+      .max(100)
+      .optional()
+      .describe("Maximum number of pipelines to return (defaults to 10)"),
+    page: z
+      .number()
+      .min(1)
+      .optional()
+      .describe("Page number for pagination (defaults to 1)"),
+    target_branch: z
+      .string()
+      .optional()
+      .describe("Filter pipelines by target branch name"),
+  },
+  async ({ state, limit, page, target_branch }) => {
+    const pipelineLimit = limit || 10;
+    const pageNum = page || 1;
+    const sortOrder = "-created_on";
+
+    try {
+      const auth = Buffer.from(
+        `${BITBUCKET_USERNAME}:${BITBUCKET_PASSWORD}`,
+      ).toString("base64");
+
+
+      let url = `https://api.bitbucket.org/2.0/repositories/${WORKSPACE_AND_REPO_PATH}/pipelines/?pagelen=${pipelineLimit}&page=${pageNum}&sort=${sortOrder}`;
+
+      if (state) {
+        url += `&state=${state}`;
+      }
+
+      if (target_branch) {
+        url += `&target.ref_name=${target_branch}`;
+      }
+
+      const response = await fetch(url, {
+        headers: {
+          Authorization: `Basic ${auth}`,
+          Accept: "application/json",
+        },
+      });
+
+      if (!response.ok) {
+        throw new Error(
+          `Bitbucket API error: ${response.status} ${response.statusText}`,
+        );
+      }
+
+      const data = await response.json();
+      const pipelines = await Promise.all(data.values.map(async (pipeline: any) => {
+        let commitMessage = pipeline.target?.commit?.message;
+        
+        // If commit message is not available, fetch it using the commit hash
+        if (!commitMessage && pipeline.target?.commit?.hash) {
+          try {
+            const commitUrl = `https://api.bitbucket.org/2.0/repositories/${WORKSPACE_AND_REPO_PATH}/commit/${pipeline.target.commit.hash}`;
+            const commitResponse = await fetch(commitUrl, {
+              headers: {
+                Authorization: `Basic ${auth}`,
+                Accept: "application/json",
+              },
+            });
+            
+            if (commitResponse.ok) {
+              const commitData = await commitResponse.json();
+              commitMessage = commitData.message;
+              // Update the target commit message
+              if (pipeline.target && pipeline.target.commit) {
+                pipeline.target.commit.message = commitMessage;
+              }
+            }
+          } catch (error) {
+            // Ignore errors fetching commit details
+          }
+        }
+
+        // Extract PR ID from commit message if it follows the format #pr_id
+        const prIdMatch = commitMessage?.match(/#(\d+)/);
+        const pr_id = prIdMatch ? parseInt(prIdMatch[1]) : null;
+
+        return {
+          pr_id: pr_id,
+          // uuid: pipeline.uuid,
+          // build_number: pipeline.build_number,
+          state: pipeline.state,
+          created_on: pipeline.created_on,
+          completed_on: pipeline.completed_on,
+          run_number: pipeline.run_number,
+          duration_in_seconds: pipeline.duration_in_seconds,
+          target: pipeline.target,
+          // trigger: pipeline.trigger,
+          // links: pipeline.links,
+        };
+      }));
+
+      return {
+        content: [
+          {
+            type: "text",
+            text: JSON.stringify(
+              {
+                total_count: data.size,
+                page: pageNum,
+                page_length: pipelineLimit,
+                next: data.next || null,
+                previous: data.previous || null,
+                pipelines: pipelines,
+              },
+              null,
+              2,
+            ),
+          },
+        ],
+      };
+    } catch (error) {
+      return {
+        content: [
+          {
+            type: "text",
+            text: `Error fetching pipelines: ${error instanceof Error ? error.message : String(error)}`,
           },
         ],
         isError: true,

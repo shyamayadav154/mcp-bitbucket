@@ -253,7 +253,7 @@ server.tool(
 
         // Get consolidated diff for the entire PR if requested
         if (shouldIncludeDiff) {
-          const prDiffUrl = `https://api.bitbucket.org/2.0/repositories/${WORKSPACE_AND_REPO_PATH}/pullrequests/${pr.id}/diff`;
+          const prDiffUrl = `https://api.bitbucket.org/2.0/repositories/${WORKSPACE_AND_REPO_PATH}/pullrequests/${pr.id}/diff?ignore_whitespace=true&binary=false`;
 
           try {
             const prDiffResponse = await fetch(prDiffUrl, {

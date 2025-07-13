@@ -1,6 +1,6 @@
 {
   "name": "mcp-bitbucket",
-  "version": "0.0.3",
+  "version": "0.0.4",
   "description": "Model Context Protocol server for Bitbucket integration - manage pull requests, comments, and diffs",
   "type": "module",
   "main": "./build/index.js",

@@ -149,8 +149,12 @@ server.tool(
       .optional()
       .describe("Source branch name to find the PR"),
     pr_id: z.number().optional().describe("Pull request ID"),
+    include_diff: z
+      .boolean()
+      .optional()
+      .describe("Whether to include commit diffs in the response (defaults to false)"),
   },
-  async ({ source_branch, pr_id }) => {
+  async ({ source_branch, pr_id, include_diff }) => {
     // Validate that either source_branch or pr_id is provided
     if (!source_branch && !pr_id) {
       return {
@@ -163,6 +167,8 @@ server.tool(
         isError: true,
       };
     }
+
+    const shouldIncludeDiff = include_diff === true; // defaults to false
 
     try {
       const auth = Buffer.from(
@@ -235,41 +241,43 @@ server.tool(
       if (commitsResponse.ok) {
         const commitsData = await commitsResponse.json();
 
-        // Get diff for each commit
+        // Get diff for each commit if requested
         for (const commit of commitsData.values) {
-          const commitDiffUrl = `https://api.bitbucket.org/2.0/repositories/${WORKSPACE_AND_REPO_PATH}/diff/${commit.hash}`;
+          let diff = null;
+          
+          if (shouldIncludeDiff) {
+            const commitDiffUrl = `https://api.bitbucket.org/2.0/repositories/${WORKSPACE_AND_REPO_PATH}/diff/${commit.hash}`;
 
-          try {
-            const commitDiffResponse = await fetch(commitDiffUrl, {
-              headers: {
-                Authorization: `Basic ${auth}`,
-                Accept: "text/plain",
-              },
-            });
+            try {
+              const commitDiffResponse = await fetch(commitDiffUrl, {
+                headers: {
+                  Authorization: `Basic ${auth}`,
+                  Accept: "text/plain",
+                },
+              });
 
-            let diff = null;
-            if (commitDiffResponse.ok) {
-              diff = await commitDiffResponse.text();
-            } else {
-              diff = `Error fetching diff: ${commitDiffResponse.status} ${commitDiffResponse.statusText}`;
+              if (commitDiffResponse.ok) {
+                diff = await commitDiffResponse.text();
+              } else {
+                diff = `Error fetching diff: ${commitDiffResponse.status} ${commitDiffResponse.statusText}`;
+              }
+            } catch (error) {
+              diff = `Error fetching diff: ${error instanceof Error ? error.message : String(error)}`;
             }
-
-            commits.push({
-              hash: commit.hash,
-              message: commit.message,
-              author: commit.author.user?.display_name || commit.author.raw,
-              date: commit.date,
-              diff: diff,
-            });
-          } catch (error) {
-            commits.push({
-              hash: commit.hash,
-              message: commit.message,
-              author: commit.author.user?.display_name || commit.author.raw,
-              date: commit.date,
-              diff: `Error fetching diff: ${error instanceof Error ? error.message : String(error)}`,
-            });
           }
+
+          const commitData: any = {
+            hash: commit.hash,
+            message: commit.message,
+            author: commit.author.user?.display_name || commit.author.raw,
+            date: commit.date,
+          };
+
+          if (shouldIncludeDiff) {
+            commitData.diff = diff;
+          }
+
+          commits.push(commitData);
         }
       } else {
         commits = [
@@ -453,7 +461,6 @@ server.tool(
         `${BITBUCKET_USERNAME}:${BITBUCKET_PASSWORD}`,
       ).toString("base64");
 
-
       let url = `https://api.bitbucket.org/2.0/repositories/${WORKSPACE_AND_REPO_PATH}/pipelines/?pagelen=${pipelineLimit}&page=${pageNum}&sort=${sortOrder}`;
 
       if (state) {
@@ -478,51 +485,53 @@ server.tool(
       }
 
       const data = await response.json();
-      const pipelines = await Promise.all(data.values.map(async (pipeline: any) => {
-        let commitMessage = pipeline.target?.commit?.message;
-        
-        // If commit message is not available, fetch it using the commit hash
-        if (!commitMessage && pipeline.target?.commit?.hash) {
-          try {
-            const commitUrl = `https://api.bitbucket.org/2.0/repositories/${WORKSPACE_AND_REPO_PATH}/commit/${pipeline.target.commit.hash}`;
-            const commitResponse = await fetch(commitUrl, {
-              headers: {
-                Authorization: `Basic ${auth}`,
-                Accept: "application/json",
-              },
-            });
-            
-            if (commitResponse.ok) {
-              const commitData = await commitResponse.json();
-              commitMessage = commitData.message;
-              // Update the target commit message
-              if (pipeline.target && pipeline.target.commit) {
-                pipeline.target.commit.message = commitMessage;
+      const pipelines = await Promise.all(
+        data.values.map(async (pipeline: any) => {
+          let commitMessage = pipeline.target?.commit?.message;
+
+          // If commit message is not available, fetch it using the commit hash
+          if (!commitMessage && pipeline.target?.commit?.hash) {
+            try {
+              const commitUrl = `https://api.bitbucket.org/2.0/repositories/${WORKSPACE_AND_REPO_PATH}/commit/${pipeline.target.commit.hash}`;
+              const commitResponse = await fetch(commitUrl, {
+                headers: {
+                  Authorization: `Basic ${auth}`,
+                  Accept: "application/json",
+                },
+              });
+
+              if (commitResponse.ok) {
+                const commitData = await commitResponse.json();
+                commitMessage = commitData.message;
+                // Update the target commit message
+                if (pipeline.target && pipeline.target.commit) {
+                  pipeline.target.commit.message = commitMessage;
+                }
               }
+            } catch (error) {
+              // Ignore errors fetching commit details
             }
-          } catch (error) {
-            // Ignore errors fetching commit details
           }
-        }
 
-        // Extract PR ID from commit message if it follows the format #pr_id
-        const prIdMatch = commitMessage?.match(/#(\d+)/);
-        const pr_id = prIdMatch ? parseInt(prIdMatch[1]) : null;
+          // Extract PR ID from commit message if it follows the format #pr_id
+          const prIdMatch = commitMessage?.match(/#(\d+)/);
+          const pr_id = prIdMatch ? parseInt(prIdMatch[1]) : null;
 
-        return {
-          pr_id: pr_id,
-          // uuid: pipeline.uuid,
-          // build_number: pipeline.build_number,
-          state: pipeline.state,
-          created_on: pipeline.created_on,
-          completed_on: pipeline.completed_on,
-          run_number: pipeline.run_number,
-          duration_in_seconds: pipeline.duration_in_seconds,
-          target: pipeline.target,
-          // trigger: pipeline.trigger,
-          // links: pipeline.links,
-        };
-      }));
+          return {
+            pr_id: pr_id,
+            // uuid: pipeline.uuid,
+            // build_number: pipeline.build_number,
+            state: pipeline.state,
+            created_on: pipeline.created_on,
+            completed_on: pipeline.completed_on,
+            run_number: pipeline.run_number,
+            duration_in_seconds: pipeline.duration_in_seconds,
+            target: pipeline.target,
+            // trigger: pipeline.trigger,
+            // links: pipeline.links,
+          };
+        }),
+      );
 
       return {
         content: [

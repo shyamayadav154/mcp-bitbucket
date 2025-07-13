@@ -4,10 +4,11 @@ A Model Context Protocol (MCP) server that provides access to Bitbucket pull req
 
 ## Features
 
-- **Pull Request Management**: List, filter, and retrieve pull requests by state (OPEN, MERGED, DECLINED)
-- **Comment System**: Get and add comments to pull requests
-- **Diff Inspection**: Retrieve pull request diffs for code review
+- **Pull Request Management**: List, filter, and retrieve pull requests by state (OPEN, MERGED, DECLINED) with pagination support
+- **Comment System**: Add comments to pull requests
+- **Diff Inspection**: Retrieve individual commit diffs for comprehensive code review
 - **Branch/PR_ID based Search**: Find pull requests by source branch name or PR ID
+- **Target Branch Filtering**: Filter pull requests by destination/target branch
 - **Environment-based Configuration**: Configure repository via environment variables
 
 ## API
@@ -16,18 +17,13 @@ A Model Context Protocol (MCP) server that provides access to Bitbucket pull req
 
 - **list_pull_requests**
   - List pull requests from the configured Bitbucket repository
-  - Input: `state` (OPEN/MERGED/DECLINED), `limit` (1-50) default 50
-  - Returns: Formatted list of pull requests with metadata
+  - Input: `state` (OPEN/MERGED/DECLINED), `limit` (1-100) default 50, `page` (pagination), `target_branch` (filter by target branch)
+  - Returns: Formatted list of pull requests with metadata and pagination info
 
-- **get_pr_comments**
-  - Get comments from a specific pull request
-  - Input: `pr_id`, `limit` (1-100) default 50
-  - Returns: All comments including inline code comments
-
-- **get_pr_with_diff**
-  - Get pull request details with diff content
-  - Input: `source_branch` OR `pr_id`, `include_diff` (boolean)
-  - Returns: Complete pull request information with diff
+- **get_pr_details**
+  - Get pull request details with individual commit messages and their diffs
+  - Input: `source_branch` OR `pr_id`
+  - Returns: Complete pull request information with individual commit diffs
 
 - **add_pr_comment**
   - Add a general comment to a pull request

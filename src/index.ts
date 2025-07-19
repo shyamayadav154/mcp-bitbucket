@@ -335,6 +335,94 @@ server.tool(
   },
 );
 
+// Register add inline comment to PR tool
+server.tool(
+  "add_pr_inline_comment",
+  "Add an inline comment to a specific line in a pull request",
+  {
+    pr_id: z.number().describe("Pull request ID"),
+    content: z.string().describe("Comment content"),
+    file_path: z.string().describe("Path to the file in the PR"),
+    line: z.number().describe("Line number to comment on"),
+  },
+  async ({ pr_id, content, file_path, line }) => {
+    try {
+      const auth = Buffer.from(
+        `${BITBUCKET_USERNAME}:${BITBUCKET_PASSWORD}`,
+      ).toString("base64");
+      const url = `https://api.bitbucket.org/2.0/repositories/${WORKSPACE_AND_REPO_PATH}/pullrequests/${pr_id}/comments`;
+
+      const commentData = {
+        content: {
+          raw: content,
+        },
+        inline: {
+          to: line,
+          path: file_path,
+        },
+      };
+
+      const response = await fetch(url, {
+        method: "POST",
+        headers: {
+          Authorization: `Basic ${auth}`,
+          Accept: "application/json",
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(commentData),
+      });
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(
+          `Bitbucket API error: ${response.status} ${response.statusText} - ${errorText}`,
+        );
+      }
+
+      const responseData = await response.json();
+
+      const commentDetails = {
+        id: responseData.id,
+        content: responseData.content.raw,
+        author: responseData.user.display_name,
+        created_on: responseData.created_on,
+        type: responseData.type,
+        inline: responseData.inline,
+        links: {
+          html: responseData.links?.html?.href,
+        },
+      };
+
+      return {
+        content: [
+          {
+            type: "text",
+            text: JSON.stringify(
+              {
+                pull_request_id: pr_id,
+                message: "Inline comment added successfully to pull request",
+                comment: commentDetails,
+              },
+              null,
+              2,
+            ),
+          },
+        ],
+      };
+    } catch (error) {
+      return {
+        content: [
+          {
+            type: "text",
+            text: `Error adding PR inline comment: ${error instanceof Error ? error.message : String(error)}`,
+          },
+        ],
+        isError: true,
+      };
+    }
+  },
+);
+
 // Register add comment to PR tool
 server.tool(
   "add_pr_comment",

@@ -9,7 +9,7 @@
   },
   "scripts": {
     "build": "tsc && chmod 755 build/index.js",
-    "dev": "tsc --watch"
+    "dev": "export DANGEROUSLY_OMIT_AUTH=true && npx @modelcontextprotocol/inspector $(cat .env | sed 's/^/-e /') tsx src/index.ts"
   },
   "files": [
     "build",
@@ -42,6 +42,7 @@
   },
   "devDependencies": {
     "@types/node": "^24.0.13",
+    "tsx": "^4.20.3",
     "typescript": "^5.8.3"
   }
 }

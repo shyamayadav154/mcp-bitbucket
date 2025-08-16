@@ -5,7 +5,7 @@ A Model Context Protocol (MCP) server that provides access to Bitbucket pull req
 ## Features
 
 - **Pull Request Management**: List, filter, and retrieve pull requests by state (OPEN, MERGED, DECLINED) with pagination support
-- **Comment System**: Add general and inline comments to pull requests
+- **Comment System**: Add general and inline comments to pull requests, view all comments on PRs
 - **Diff Inspection**: Retrieve consolidated PR diff for comprehensive code review (ignores whitespace changes by default)
 - **Branch/PR_ID based Search**: Find pull requests by source branch name or PR ID
 - **Target Branch Filtering**: Filter pull requests by destination/target branch
@@ -36,6 +36,11 @@ A Model Context Protocol (MCP) server that provides access to Bitbucket pull req
   - Add an inline comment to a specific line in a pull request
   - Input: `pr_id`, `content`, `file_path`, `line`
   - Returns: Created inline comment details
+
+- **view_pr_comments**
+  - View all comments on a pull request by source branch name or PR ID
+  - Input: `source_branch` OR `pr_id`, `limit` (1-100, defaults to 50), `page` (pagination)
+  - Returns: All comments (general and inline) with author info, timestamps, and pagination details
 
 - **list_pipelines**
   - List pipelines from the configured Bitbucket repository with commit message details

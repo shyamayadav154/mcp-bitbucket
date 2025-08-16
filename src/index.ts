@@ -504,6 +504,153 @@ server.tool(
   },
 );
 
+// Register view PR comments tool
+server.tool(
+  "view_pr_comments",
+  "View all comments on a pull request by source branch name or PR ID",
+  {
+    source_branch: z
+      .string()
+      .optional()
+      .describe("Source branch name to find the PR"),
+    pr_id: z.number().optional().describe("Pull request ID"),
+    limit: z
+      .number()
+      .min(1)
+      .max(100)
+      .optional()
+      .describe("Maximum number of comments to return (defaults to 50)"),
+    page: z
+      .number()
+      .min(1)
+      .optional()
+      .describe("Page number for pagination (defaults to 1)"),
+  },
+  async ({ source_branch, pr_id, limit, page }) => {
+    // Validate that either source_branch or pr_id is provided
+    if (!source_branch && !pr_id) {
+      return {
+        content: [
+          {
+            type: "text",
+            text: "Either source_branch or pr_id must be provided",
+          },
+        ],
+        isError: true,
+      };
+    }
+
+    const commentLimit = limit || 50;
+    const pageNum = page || 1;
+
+    try {
+      const auth = Buffer.from(
+        `${BITBUCKET_USERNAME}:${BITBUCKET_PASSWORD}`,
+      ).toString("base64");
+      
+      let targetPrId = pr_id;
+
+      // If we need to find PR by source branch
+      if (!targetPrId && source_branch) {
+        const searchUrl = `https://api.bitbucket.org/2.0/repositories/${WORKSPACE_AND_REPO_PATH}/pullrequests?q=source.branch.name="${source_branch}"`;
+
+        const searchResponse = await fetch(searchUrl, {
+          headers: {
+            Authorization: `Basic ${auth}`,
+            Accept: "application/json",
+          },
+        });
+
+        if (!searchResponse.ok) {
+          throw new Error(
+            `Bitbucket API error: ${searchResponse.status} ${searchResponse.statusText}`,
+          );
+        }
+
+        const searchData = await searchResponse.json();
+
+        if (searchData.values.length === 0) {
+          return {
+            content: [
+              {
+                type: "text",
+                text: `No pull request found for source branch: ${source_branch}`,
+              },
+            ],
+          };
+        }
+
+        targetPrId = searchData.values[0].id;
+      }
+
+      // Get comments for the PR
+      let commentsUrl = `https://api.bitbucket.org/2.0/repositories/${WORKSPACE_AND_REPO_PATH}/pullrequests/${targetPrId}/comments?pagelen=${commentLimit}&page=${pageNum}&sort=created_on`;
+
+      const commentsResponse = await fetch(commentsUrl, {
+        headers: {
+          Authorization: `Basic ${auth}`,
+          Accept: "application/json",
+        },
+      });
+
+      if (!commentsResponse.ok) {
+        throw new Error(
+          `Bitbucket API error: ${commentsResponse.status} ${commentsResponse.statusText}`,
+        );
+      }
+
+      const commentsData = await commentsResponse.json();
+      
+      const comments = commentsData.values.map((comment: any) => ({
+        id: comment.id,
+        content: comment.content.raw,
+        author: comment.user.display_name,
+        created_on: comment.created_on,
+        updated_on: comment.updated_on,
+        type: comment.type, // "pullrequest_comment" for general comments, "pullrequest_inline_comment" for inline
+        inline: comment.inline || null, // Contains file path and line info for inline comments
+        links: {
+          html: comment.links?.html?.href,
+        },
+      }));
+
+      return {
+        content: [
+          {
+            type: "text",
+            text: JSON.stringify(
+              {
+                search_method: pr_id
+                  ? `pr_id: ${pr_id}`
+                  : `source_branch: ${source_branch}`,
+                pull_request_id: targetPrId,
+                total_count: commentsData.size,
+                page: pageNum,
+                page_length: commentLimit,
+                next: commentsData.next || null,
+                previous: commentsData.previous || null,
+                comments: comments,
+              },
+              null,
+              2,
+            ),
+          },
+        ],
+      };
+    } catch (error) {
+      return {
+        content: [
+          {
+            type: "text",
+            text: `Error fetching PR comments: ${error instanceof Error ? error.message : String(error)}`,
+          },
+        ],
+        isError: true,
+      };
+    }
+  },
+);
+
 // Register list pipelines tool
 server.tool(
   "list_pipelines",

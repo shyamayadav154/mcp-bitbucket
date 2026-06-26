@@ -4,17 +4,17 @@ import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 import { z } from "zod";
 
-const BITBUCKET_USERNAME = process.env.BITBUCKET_USERNAME;
-const BITBUCKET_PASSWORD = process.env.BITBUCKET_PASSWORD;
+const BITBUCKET_EMAIL = process.env.BITBUCKET_EMAIL;
+const BITBUCKET_API_TOKEN = process.env.BITBUCKET_API_TOKEN;
 const BITBUCKET_URL = process.env.BITBUCKET_URL;
 
 // Validate required environment variables
-if (!BITBUCKET_USERNAME) {
-  throw new Error("BITBUCKET_USERNAME environment variable is required");
+if (!BITBUCKET_EMAIL) {
+  throw new Error("BITBUCKET_EMAIL environment variable is required");
 }
 
-if (!BITBUCKET_PASSWORD) {
-  throw new Error("BITBUCKET_PASSWORD environment variable is required");
+if (!BITBUCKET_API_TOKEN) {
+  throw new Error("BITBUCKET_API_TOKEN environment variable is required");
 }
 
 if (!BITBUCKET_URL) {
@@ -68,7 +68,7 @@ server.tool(
 
     try {
       const auth = Buffer.from(
-        `${BITBUCKET_USERNAME}:${BITBUCKET_PASSWORD}`,
+        `${BITBUCKET_EMAIL}:${BITBUCKET_API_TOKEN}`,
       ).toString("base64");
 
       let url = `https://api.bitbucket.org/2.0/repositories/${WORKSPACE_AND_REPO_PATH}/pullrequests?state=${prState}&pagelen=${prLimit}&page=${pageNum}`;
@@ -172,7 +172,7 @@ server.tool(
 
     try {
       const auth = Buffer.from(
-        `${BITBUCKET_USERNAME}:${BITBUCKET_PASSWORD}`,
+        `${BITBUCKET_EMAIL}:${BITBUCKET_API_TOKEN}`,
       ).toString("base64");
       let pr: any;
 
@@ -348,7 +348,7 @@ server.tool(
   async ({ pr_id, content, file_path, line }) => {
     try {
       const auth = Buffer.from(
-        `${BITBUCKET_USERNAME}:${BITBUCKET_PASSWORD}`,
+        `${BITBUCKET_EMAIL}:${BITBUCKET_API_TOKEN}`,
       ).toString("base64");
       const url = `https://api.bitbucket.org/2.0/repositories/${WORKSPACE_AND_REPO_PATH}/pullrequests/${pr_id}/comments`;
 
@@ -434,7 +434,7 @@ server.tool(
   async ({ pr_id, content }) => {
     try {
       const auth = Buffer.from(
-        `${BITBUCKET_USERNAME}:${BITBUCKET_PASSWORD}`,
+        `${BITBUCKET_EMAIL}:${BITBUCKET_API_TOKEN}`,
       ).toString("base64");
       const url = `https://api.bitbucket.org/2.0/repositories/${BITBUCKET_URL.replace("https://bitbucket.org/", "")}/pullrequests/${pr_id}/comments`;
 
@@ -545,7 +545,7 @@ server.tool(
 
     try {
       const auth = Buffer.from(
-        `${BITBUCKET_USERNAME}:${BITBUCKET_PASSWORD}`,
+        `${BITBUCKET_EMAIL}:${BITBUCKET_API_TOKEN}`,
       ).toString("base64");
       
       let targetPrId = pr_id;
@@ -691,7 +691,7 @@ server.tool(
 
     try {
       const auth = Buffer.from(
-        `${BITBUCKET_USERNAME}:${BITBUCKET_PASSWORD}`,
+        `${BITBUCKET_EMAIL}:${BITBUCKET_API_TOKEN}`,
       ).toString("base64");
 
       let url = `https://api.bitbucket.org/2.0/repositories/${WORKSPACE_AND_REPO_PATH}/pipelines/?pagelen=${pipelineLimit}&page=${pageNum}&sort=${sortOrder}`;

@@ -51,13 +51,13 @@ A Model Context Protocol (MCP) server that provides access to Bitbucket pull req
 
 - Node.js (version 18.x or higher)
 - Bitbucket Cloud account
-- Bitbucket App Password with appropriate permissions
+- Bitbucket API Token with appropriate permissions
 
 ## Setup
 
-### 1. Generate Bitbucket App Password
+### 1. Generate Bitbucket API Token
 
-Generate one from [Bitbucket App Passwords](https://bitbucket.org/account/settings/app-passwords/). Minimum permissions:
+Generate one from [Bitbucket API Tokens](https://bitbucket.org/account/settings/personal-access-tokens/). Minimum permissions:
 
 - Workspaces: Read
 - Repositories: Read
@@ -74,8 +74,8 @@ Generate one from [Bitbucket App Passwords](https://bitbucket.org/account/settin
       "command": "npx",
       "args": ["mcp-bitbucket"],
       "env": {
-        "BITBUCKET_USERNAME": "<your_username>",
-        "BITBUCKET_PASSWORD": "<your_app_password>",
+        "BITBUCKET_EMAIL": "<your_atlassian_account_email>",
+        "BITBUCKET_API_TOKEN": "<your_api_token>",
         "BITBUCKET_URL": "https://bitbucket.org/<workspace>/<repo_name>"
       }
     }
@@ -89,7 +89,7 @@ Generate one from [Bitbucket App Passwords](https://bitbucket.org/account/settin
 
 ## Security Note
 
-This server uses Bitbucket App Passwords for authentication. Create an App Password in your Bitbucket settings with appropriate permissions for repositories and pull requests.
+This server uses Bitbucket API Tokens for authentication. Create an API Token in your Bitbucket settings with appropriate permissions for repositories and pull requests.
 
 ## License
 
